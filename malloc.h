@@ -18,10 +18,11 @@ typedef struct		s_memory
 	struct s_memory	*next;
 }					t_memory;
 
-static t_memory	mem[3] = { 0 };
+static t_memory	*mem[3] = { 0 };
 
-void	*alloc_tiny_mem(size_t size);
-void	show_alloc_mem(void);
-void	*ft_malloc(size_t size);
+void		show_alloc_mem();
+int			ft_is_memory_saturated(t_memory *memory, size_t size, size_t memory_zone);
+size_t		ft_print_alloc_info(t_memory *cur);
+void		*ft_malloc(size_t size);
 
 #endif

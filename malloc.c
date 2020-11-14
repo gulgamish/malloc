@@ -1,65 +1,92 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   malloc.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: aelamran <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2020/11/14 18:13:46 by aelamran          #+#    #+#             */
+/*   Updated: 2020/11/14 20:46:19 by aelamran         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "malloc.h"
 
-int	set_memory()
+int	set_memory(size_t size)
 {
-	mem[0].memory_size = TINY;
-	if ((mem[0].ptr = 
-	mmap(NULL, TINY, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)) == MAP_FAILED)
-		return (-1);
-	mem[1].memory_size = SMALL;
-	if ((mem[1].ptr = mmap(NULL, SMALL, PROT_READ
+	if (!mem[0] || (size <= TINY && ft_is_memory_saturated(mem[0], size, TINY)))
+	{
+		if (mem[0])
+			if (munmap((void *)mem[0], TINY) == -1)
+				return (-1);
+		if ((mem[0] = (t_memory *)mmap(NULL, TINY, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)) == MAP_FAILED)
+			return (-1);
+	}
+	if (!mem[1] || (size <= SMALL && ft_is_memory_saturated(mem[0], size, SMALL)))
+	{
+		if (mem[1])
+			if (munmap((void *)mem[0], TINY) == -1)
+				return (-1);
+		if ((mem[1] = (t_memory *)mmap(NULL, SMALL, PROT_READ
 					| PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)) == MAP_FAILED)
-		return (-1);
-	mem[2].memory_size = LARGE;
+			return (-1);
+	}
 	return (1);
 }
 
-void	show_alloc_mem(void)
+void	show_alloc_mem()
 {
-	void	*ptr;
-	int	i;
+	t_memory	*cur;
+	size_t		total;
 
-	ptr = mem[0].ptr;
-	i = 0;
-	printf("TINY : %p\n", ptr);
-	while (mem[0].allocated_bytes[i] != 0)
-	{
-		printf("%p - %p : %d bytes\n", ptr,
-				ptr + mem[0].allocated_bytes[i], (int)mem[0].allocated_bytes[i]);
-		ptr = ptr + mem[0].allocated_bytes[i];
-		i++;
-	}
+	total = 0;
+	cur = mem[0];
+	printf("TINY: %p\n", cur);
+	if (cur)
+		total += ft_print_alloc_info(cur);
+	cur = mem[1];
+	printf("SMALL: %p\n", cur);
+	if (cur)
+		total += ft_print_alloc_info(cur);
+	cur = mem[2];
+	printf("LARGE: %p\n", cur);
+	if (cur)
+		total += ft_print_alloc_info(cur);
+	printf("Total : %zu bytes\n", total);
 }
 
-void	*alloc_tiny_mem(size_t size)
+void	*ft_newblock(size_t size, int memory_type)
 {
-	void	*ptr;
-	void	*addr;
-	int	i;
+	t_memory *new_block;
+	t_memory *cur;
 
-	ptr = mem[0].ptr;
-	i = 0;
-	while (mem[0].allocated_bytes[i] != 0)
-	{
-		ptr = ptr + mem[0].allocated_bytes[i];
-		i++;
-	}
-	addr = ptr;
-	mem[0].allocated_bytes[i] = size;
-	return (addr);
+	if (memory_type == 0)
+		cur = mem[0];
+	else if (memory_type == 1)
+		cur = mem[1];
+	while (cur->next)
+		cur = cur->next;
+	new_block = cur;
+	new_block->block_addr =(t_memory *)((size_t)new_block + sizeof(t_memory));
+	new_block->block_size = size;
+	new_block->is_freed = 0;
+	new_block->next = (t_memory *)((size_t)new_block + sizeof(t_memory) + size);
+	cur = new_block;
+	return (new_block->block_addr);
 }
 
 void	*ft_malloc(size_t size)
 {
 	void	*addr;
 
-	if (set_memory() == -1)
+	if (set_memory(size) == -1)
 		return (NULL);
-	if (size <= mem[0].memory_size)
-		addr = alloc_tiny_mem(size);
-	/*else if (size <= mem[1].memory_size)
-	  alloc_small_mem(size);
-	  else
+	//printf("%p\n", mem[0]);
+	if (size <= TINY)
+		addr = ft_newblock(size, 0);
+	else if (size <= LARGE)
+		addr = ft_newblock(size, 1);
+	  /*else
 	  alloc_large_mem();*/
 	return (addr);
 }
